@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice Call Program</title>
+</head>
+<body>
+  <h1>Voice Call Program</h1>
+  
+  <form id="registrationForm">
+    <label for="username">Username:</label>
+    <input type="text" id="username" required />
+    <button type="submit">Register</button>
+  </form>
+  
+  <div id="roomSelection">
+    <h3>Select Room:</h3>
+    <select id="room">
+      <option value="room1">Room 1</option>
+      <option value="room2">Room 2</option>
+      <option value="room3">Room 3</option>
+      <option value="room4">Room 4</option>
+    </select>
+    <button id="joinRoom">Join Room</button>
+  </div>
+  
+  <div id="roomContainer" style="display: none;">
+    <h2 id="currentRoom"></h2>
+    
+    <button id="leaveRoom">Leave Room</button>
+    
+    <div id="userList">
+      <h3>Users in Room:</h3>
+      <ul id="users"></ul>
+    </div>
+  </div>
+  
+  <textarea id="audioData" placeholder="Enter audio data..."></textarea>
+  <button id="sendAudio" onClick="sendAudio()">Send Audio</button>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+  <script>
+    let currentRoom;
+    const serverUrl = 'http://localhost:3000'; // Replace with your actual server URL
+    
+    const socket = io(serverUrl);
+    
+    const registrationForm = document.querySelector('#registrationForm');
+    registrationForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const usernameInput = document.querySelector('#username');
+      const username = usernameInput.value;
+      
+      // Send the username to the server
+      socket.emit('registerUser', username);
+      
+      registrationForm.style.display = 'none';
+      document.querySelector('#roomSelection').style.display = 'block';
+      // document.querySelector('#currentRoom').textContent = `Current User: ${username}`;
+    });
+    
+    const joinRoomButton = document.querySelector('#joinRoom');
+    joinRoomButton.addEventListener('click', () => {
+      const roomSelect = document.querySelector('#room');
+      currentRoom = roomSelect.value;
+      // Send the selected room to the server
+      socket.emit('joinRoom', {room : currentRoom});
+
+      document.querySelector('#roomSelection').style.display = 'none';
+      document.querySelector('#roomContainer').style.display = 'block';
+    });
+    
+    function leaveRoom() {
+      // Emit a 'leaveRoom' event with the selected room and username
+      socket.emit('leaveRoom', { room: currentRoom });
+
+      roomSelection.style.display = 'block';
+      document.querySelector('#roomContainer').style.display = 'none';
+    }
+
+    const leaveRoomButton = document.querySelector('#leaveRoom');
+    leaveRoomButton.addEventListener('click', leaveRoom);
+
+    function sendAudio() {
+      const audioDataInput = document.querySelector('#audioData');
+      const audioData = audioDataInput.value.trim();
+      // Emit an 'audio' event with the selected room, username, and audio data
+      socket.emit('audio', { room: currentRoom, audioData });
+      audioDataInput.value = '';
+    }
+    const sendAudioButton = document.querySelector('#sendAudio');
+    sendAudioButton.addEventListener('click', sendAudio);
+
+    // Listen for 'userJoined' event
+    socket.on('userJoined', (data) => {
+      console.log(data.userCount);
+    });
+
+    // Listen for 'userLeft' event
+    socket.on('userLeft', (data) => {
+      const userItems = document.querySelectorAll('#users li');
+      userItems.forEach((item) => {
+        if (item.textContent === data.username) {
+          item.remove();
+        }
+      });
+    });
+
+    // Listen for 'broadcastAudio' event
+    socket.on('broadcastAudio', (data) => {
+      alert(`Received audio: ${data.audioData}`);
+    });
+    // ... Rest of the code for handling leaving room, sending audio, etc.
+  </script>
+</body>
+</html>
